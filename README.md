@@ -137,7 +137,7 @@ We evaluated both agents on four diverse benchmark datasets, each representing d
 - **Med_QA (中文)**: Chinese medical question answering, testing domain-specific knowledge and language understanding
 - **MBPP**: Python code generation benchmark, evaluating programming capability and code correctness
 
-Both agents were tested under identical conditions using the same LLM models and API configurations to ensure fair comparison.
+Both agents were tested under identical conditions using the same LLM models and API configurations to ensure fair comparison. The LLM used was Kimi-K2.
 
 ### Performance Comparison
 
