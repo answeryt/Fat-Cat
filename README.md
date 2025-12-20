@@ -124,7 +124,62 @@ Fat-Cat/
 └── main.py                 # Entry point
 ```
 
-## 5. Quick Start
+## 5. Benchmark Results & Performance Evaluation
+
+To validate the effectiveness of the Fat-Cat framework, we conducted comprehensive benchmark evaluations comparing Fat-Cat Agent against the baseline React Agent across multiple challenging tasks. The results demonstrate significant improvements in accuracy and reliability.
+
+### Experimental Setup
+
+We evaluated both agents on four diverse benchmark datasets, each representing different types of reasoning challenges:
+
+- **HotPotQA (sample200)**: Multi-hop question answering requiring information synthesis across multiple documents
+- **Bamboogle**: Complex web search and information retrieval tasks
+- **Med_QA (中文)**: Chinese medical question answering, testing domain-specific knowledge and language understanding
+- **MBPP**: Python code generation benchmark, evaluating programming capability and code correctness
+
+Both agents were tested under identical conditions using the same LLM models and API configurations to ensure fair comparison.
+
+### Performance Comparison
+
+<p align="center">
+  <img src="image2.png" alt="Performance Comparison of React Agent and Fat-Cat Agent" width="800">
+</p>
+
+### Key Findings
+
+The benchmark results reveal consistent and substantial improvements across all evaluated tasks. As shown in the comparison chart above, Fat-Cat Agent consistently outperforms the React Agent baseline across all four benchmark datasets.
+
+### Analysis & Insights
+
+**1. Multi-Hop Reasoning (HotPotQA)**
+The largest improvement (+12.58%) was observed in HotPotQA, which requires synthesizing information from multiple sources. Fat-Cat's metacognitive analysis (Stage 1) and strategic planning (Stage 2) enable better information gathering and cross-document reasoning compared to the reactive baseline.
+
+**2. Code Generation (MBPP)**
+Fat-Cat achieved 95.3% accuracy on MBPP, demonstrating the effectiveness of its step-by-step decomposition (Stage 3) and execution planning. The Watcher Agent's runtime monitoring helps catch errors early, preventing cascading failures.
+
+**3. Domain-Specific Tasks (Med_QA)**
+Even in specialized domains like medical QA, Fat-Cat's capability upgrade mechanism (Stage 2-C) allows it to learn domain-specific strategies, resulting in a 4% improvement over the baseline.
+
+**4. Web Search & Retrieval (Bamboogle)**
+Fat-Cat's metacognitive search capability enables more targeted information retrieval, improving accuracy by 5.4% on complex web search tasks.
+
+### Why Fat-Cat Performs Better
+
+The superior performance can be attributed to Fat-Cat's core architectural advantages:
+
+1. **Metacognitive Analysis**: Stage 1's deep intent perception prevents premature execution and reduces errors from misunderstanding requirements.
+
+2. **Dynamic Strategy Learning**: Stage 2's capability upgrade mechanism allows the Agent to learn new problem-solving approaches on-the-fly, rather than being limited to hard-coded strategies.
+
+3. **Structured Execution**: Stage 3's logical step decomposition creates executable plans that are less prone to deviation and errors.
+
+4. **Runtime Monitoring**: The Watcher Agent provides continuous oversight, detecting and preventing infinite loops, goal deviations, and cascading failures.
+
+5. **Document-Centric Context**: The Markdown-based global context maintains better state coherence across complex multi-step reasoning tasks compared to fragmented JSON state management.
+
+These results validate that Fat-Cat's metacognitive architecture and document-centric design significantly enhance Agent reliability and accuracy across diverse reasoning tasks.
+
+## 6. Quick Start
 
 ### Requirements
 
@@ -153,7 +208,7 @@ Configure LLM API Key in config/model_config.py. Fat-Cat is optimized for long-c
 python workflow/full_pipeline_runner.py
 ```
 
-## 6. Developer Guide: Extension & Evolution
+## 7. Developer Guide: Extension & Evolution
 
 Fat-Cat is a living system. You can make it stronger through the following methods:
 
@@ -169,6 +224,6 @@ In addition to letting the Agent learn online by itself, you can also directly a
 
 In stage2_agent, you can adjust the confidence threshold for strategy matching. The higher the threshold, the more the Agent tends to trigger "capability upgrades" to search for new knowledge rather than relying on old experience.
 
-## 7. License
+## 8. License
 
 [License Information]
