@@ -537,8 +537,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--template", type=Path, help="标准模板文件路径。")
     parser.add_argument("--encoding", default="utf-8", help="文档读写编码（默认 utf-8）。")
     parser.add_argument("--api-key", dest="api_key", help="API Key。")
-    parser.add_argument("--model", default="gemini-2.5-pro", help="模型名称。")
-    parser.add_argument("--base-url", default="https://xh-hk.a3e.top/v1", help="模型服务基础地址。")
+    parser.add_argument("--model", default=os.getenv("MODEL_NAME", "gemini-3-pro"), help="模型名称。")
+    parser.add_argument("--base-url", default=os.getenv("MODEL_BASE_URL", "https://xh-hk.a3e.top/v1"), help="模型服务基础地址。")
     parser.add_argument("--stream", action="store_true", help="启用流式输出。")
     parser.add_argument(
         "--no-strategy-auto-apply",
@@ -596,11 +596,20 @@ def _print_stage_outputs(result: dict[str, Any]) -> None:
 
 
 async def _async_main(args: argparse.Namespace) -> dict[str, Any]:
+    api_key = (
+        os.getenv("DEEPSEEK_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or os.getenv("KIMI_API_KEY")
+        or args.api_key
+    )
+    model_name = os.getenv("MODEL_NAME") or args.model
+    base_url = os.getenv("MODEL_BASE_URL") or args.base_url
+    
     shared_config = SharedModelConfig(
-        api_key=args.api_key,
-        model_name=args.model,
+        api_key=api_key,
+        model_name=model_name,
         stream=args.stream,
-        base_url=args.base_url,
+        base_url=base_url,
     )
     watcher_enabled = not args.no_watcher
     watcher_config = None
@@ -609,17 +618,21 @@ async def _async_main(args: argparse.Namespace) -> dict[str, Any]:
         if args.watcher_stream:
             watcher_stream = True
 
+        watcher_api_key = (
+            os.getenv("DEEPSEEK_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+            or os.getenv("KIMI_API_KEY")
+            or args.watcher_api_key
+            or shared_config.api_key
+        )
+        watcher_model_name = args.watcher_model or os.getenv("MODEL_NAME") or shared_config.model_name
+        watcher_base_url = args.watcher_base_url or os.getenv("MODEL_BASE_URL") or shared_config.base_url
+        
         watcher_config = ModelConfig(
-            api_key=(
-                args.watcher_api_key
-                or shared_config.api_key
-                or os.getenv("OPENAI_API_KEY")
-                or os.getenv("KIMI_API_KEY")
-                or os.getenv("DEEPSEEK_API_KEY")
-            ),
-            model_name=args.watcher_model or shared_config.model_name,
+            api_key=watcher_api_key,
+            model_name=watcher_model_name,
             stream=watcher_stream,
-            base_url=args.watcher_base_url or shared_config.base_url,
+            base_url=watcher_base_url,
             reasoning_effort=args.watcher_reasoning_effort,
         )
     runner = FullPipelineRunner(
