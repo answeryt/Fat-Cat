@@ -14,7 +14,6 @@ if str(PROJECT_ROOT) not in sys.path:
 from agents import BaseAgent
 from MCP.tavily import get_default_tavily_search_tool
 from model import ChatResponse
-from workflow.finish_form_utils import update_form_section
 
 PROMPT_PATH = Path(__file__).with_name("reasoner.md")
 ABILITY_LIBRARY_DIR = PROJECT_ROOT / "ability_library"
@@ -97,13 +96,6 @@ class MetacognitiveAnalysisAgent(BaseAgent):
         return result
 
     async def analyze_text(self, **kwargs: Any) -> str:
-        finish_form_path = kwargs.pop("finish_form_path", None)
-        finish_form_marker = kwargs.pop("finish_form_marker", "STAGE1_ANALYSIS")
-        finish_form_header = kwargs.pop(
-            "finish_form_header",
-            "## Stage 1: Metacognitive Analysis",
-        )
-
         response = await self.analyze(**kwargs)
 
         if inspect.isasyncgen(response):
@@ -113,14 +105,6 @@ class MetacognitiveAnalysisAgent(BaseAgent):
             result_text = "".join(chunks).strip()
         else:
             result_text = self._extract_text(response)
-
-        if finish_form_path:
-            self._write_finish_form(
-                finish_form_path,
-                result_text,
-                marker=finish_form_marker,
-                header=finish_form_header,
-            )
 
         return result_text
 
@@ -154,20 +138,6 @@ class MetacognitiveAnalysisAgent(BaseAgent):
                 snapshot_lines.append(line)
         return "\n".join(snapshot_lines).strip()
 
-    @staticmethod
-    def _write_finish_form(
-        finish_form_path: str | Path,
-        content: str,
-        *,
-        marker: str,
-        header: str,
-    ) -> None:
-        update_form_section(
-            finish_form_path,
-            marker_name=marker,
-            content=content,
-            header=header,
-        )
 
     async def _prepare_metacognitive_search(
         self,
