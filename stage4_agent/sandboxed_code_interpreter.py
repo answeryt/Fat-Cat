@@ -1,10 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-# stage4_agent/sandboxed_code_interpreter.py
 import subprocess
 import tempfile
 import os
