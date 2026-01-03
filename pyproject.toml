@@ -1,0 +1,121 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fat-cat"
+version = "0.1.0"
+description = "Fat-Cat: A document-centric context management Agent with multi-stage metacognitive architecture"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+authors = [
+    {name = "answeryt"}
+]
+keywords = [
+    "llm",
+    "agent",
+    "ai",
+    "metacognitive",
+    "reasoning",
+    "document-centric",
+    "context-management"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "python-dotenv>=1.0.1",
+    "httpx>=0.27.0",
+    "openai>=1.13.0",
+    "pydantic>=2.6.0",
+    "mcp>=1.0.0",
+    "PyPDF2>=3.0.0",
+    "pdfplumber>=0.11.0",
+    "spacy>=3.7.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "mypy>=1.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/answeryt/Fat-Cat"
+Repository = "https://github.com/answeryt/Fat-Cat.git"
+Issues = "https://github.com/answeryt/Fat-Cat/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "agents*",
+    "ability_library*",
+    "strategy_library*",
+    "form_templates*",
+    "MCP*",
+    "Memory_system*",
+    "Document_Checking*",
+    "stage1_agent*",
+    "stage2_agent*",
+    "stage2_capability_upgrade_agent*",
+    "stage2_candidate_agent*",
+    "stage3_agent*",
+    "stage4_agent*",
+    "Watcher_Agent*",
+    "workflow*",
+    "config*",
+    "model*",
+    "tools*",
+    "capability_upgrade_agent*",
+    "finish_form*",
+    "scripts*",
+    "test*",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agents", "workflow", "model", "config"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["test"]
+addopts = "-v --tb=short"
