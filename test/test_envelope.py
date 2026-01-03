@@ -17,7 +17,7 @@ from contracts.domain_contracts import (
     get_contract,
 )
 from model._model_response import ChatResponse
-from stage1_agent.Metacognitive_Analysis_agnet import MetacognitiveAnalysisAgent
+from stage1_agent.Metacognitive_Analysis_agent import MetacognitiveAnalysisAgent
 
 
 @pytest.fixture

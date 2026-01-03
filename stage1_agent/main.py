@@ -22,7 +22,7 @@ from Document_Checking.template_generation import TemplateGenerationAgent, Templ
 from tool_catalog import load_tool_catalog
 
 try:
-    from .Metacognitive_Analysis_agnet import MetacognitiveAnalysisAgent
+    from .Metacognitive_Analysis_agent import MetacognitiveAnalysisAgent
 except ImportError:
     import sys
     import os
@@ -31,7 +31,7 @@ except ImportError:
     if CURRENT_DIR not in sys.path:
         sys.path.insert(0, CURRENT_DIR)
 
-    from Metacognitive_Analysis_agnet import MetacognitiveAnalysisAgent
+    from Metacognitive_Analysis_agent import MetacognitiveAnalysisAgent
 
 from config import ModelConfig
 
