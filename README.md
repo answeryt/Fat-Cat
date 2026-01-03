@@ -65,7 +65,7 @@ Fat-Cat's core breakthrough lies in constructing a hierarchical metacognitive cl
 
 "Think about how to do it before starting"
 
-Traditional Agents receiving "help me write a crawler" might directly start writing code. But in Fat-Cat, Stage 1 Agent (Metacognitive_Analysis_agnet.py) will force metacognitive analysis through reasoner.md:
+Traditional Agents receiving "help me write a crawler" might directly start writing code. But in Fat-Cat, Stage 1 Agent (Metacognitive_Analysis_agent.py) will force metacognitive analysis through reasoner.md:
 
 - **Intent Decomposition:** Does the user really just want code, or do they need deployment?
 - **Constraint Extraction:** What are the implicit language, performance, and dependency library requirements?

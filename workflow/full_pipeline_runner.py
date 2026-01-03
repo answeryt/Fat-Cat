@@ -32,7 +32,7 @@ from capability_upgrade_agent.capability_upgrade_agent import (
     CapabilityUpgradeAgent,
     CapabilityUpgradeConfig,
 )
-from stage1_agent.Metacognitive_Analysis_agnet import MetacognitiveAnalysisAgent
+from stage1_agent.Metacognitive_Analysis_agent import MetacognitiveAnalysisAgent
 from stage2_agent.Strategy_Selection_agent import StrategySelectionAgent
 from stage2_candidate_agent.Candidate_Selection_agent import CandidateSelectionAgent
 from stage2_capability_upgrade_agent.stage2_capability_upgrade_agent import (

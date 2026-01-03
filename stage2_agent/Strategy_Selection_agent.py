@@ -13,7 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from agents import BaseAgent
 from model import ChatResponse
 
-PROMPT_PATH = Path(__file__).with_name("verifire.md")
+PROMPT_PATH = Path(__file__).with_name("verifier.md")
 STRATEGY_LIBRARY_DIR = PROJECT_ROOT / "strategy_library"
 
 
