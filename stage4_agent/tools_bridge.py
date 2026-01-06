@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Coroutine
 
+# 导入沙箱模块
+from .sandboxed_code_interpreter import CodeSandbox
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -63,6 +66,18 @@ class ToolsBridge:
         self._tavily_initialized = False
         # 持久化的代码执行命名空间，跨多次 code_interpreter 调用保持状态
         self._interpreter_globals: dict[str, Any] = {"__builtins__": __builtins__}
+        
+        # 初始化沙箱
+        sandbox_timeout = int(os.getenv("SANDBOX_TIMEOUT", "30"))
+        sandbox_memory = int(os.getenv("SANDBOX_MEMORY_MB", "256"))
+        isolation_level = os.getenv("SANDBOX_ISOLATION_LEVEL", "high")
+        
+        self.code_sandbox = CodeSandbox(
+            timeout=sandbox_timeout,
+            memory_limit_mb=sandbox_memory
+        )
+        self.isolation_level = isolation_level
+        self.sandbox_execution_count = 0
 
     def reset_interpreter(self):
         """重置代码解释器的命名空间，清除所有已定义的变量和函数"""
@@ -123,7 +138,7 @@ def web_search(
 
     - query: 主查询
     - fallback_queries: 可选，当前查询不足 min_results 时按顺序尝试（字符串或列表）
-    - min_results: 认为“有结果”的最低行数（粗略），低于则继续尝试后备查询
+    - min_results: 认为"有结果"的最低行数（粗略），低于则继续尝试后备查询
     """
 
     async def _do_search():
@@ -292,7 +307,8 @@ def web_scrape(bridge: ToolsBridge, url: str, format: str = "markdown") -> ToolR
 def code_interpreter(bridge: ToolsBridge, code: str) -> ToolResult:
     """Python代码执行工具，用于计算、数据处理和验证。
     
-    使用持久化命名空间：同一个 ToolsBridge 实例内，多次调用会共享变量和函数定义。
+    使用沙箱环境执行代码，确保安全性。
+    注意：持久化命名空间功能受限，仅保存安全结果。
     """
     output_buffer = io.StringIO()
     error_buffer = io.StringIO()
@@ -306,35 +322,54 @@ def code_interpreter(bridge: ToolsBridge, code: str) -> ToolResult:
         if not clean_code:
             return ToolResult(success=False, output="", error="code_interpreter received empty code snippet")
 
-        # 使用持久化的命名空间，跨多次调用保持状态
-        exec(clean_code, bridge._interpreter_globals)
-
+        # 使用沙箱执行代码，替代危险的 exec()
+        bridge.sandbox_execution_count += 1
+        
+        sandbox_result = bridge.code_sandbox.execute(
+            code=clean_code,
+            isolation_level=bridge.isolation_level
+        )
+        
+        if not sandbox_result["success"]:
+            return ToolResult(
+                success=False, 
+                output="", 
+                error=f"沙箱执行失败: {sandbox_result['error']}\n方法: {sandbox_result.get('method', 'unknown')}"
+            )
+        
+        # 获取沙箱输出
+        sandbox_output = sandbox_result.get("output", "")
+        
         stdout_text = output_buffer.getvalue()
         stderr_text = error_buffer.getvalue()
 
-        # 检查结果变量（在持久化命名空间中查找）
-        result_value = None
-        for key in ["_result_", "result", "answer"]:
-            if key in bridge._interpreter_globals:
-                result_value = bridge._interpreter_globals[key]
-                break
-
+        # 构建输出
         output_parts = []
+        
+        # 添加沙箱执行信息
+        output_parts.append(f"[沙箱执行 - {sandbox_result.get('method', 'unknown')}]")
+        
+        # 添加沙箱输出
+        if sandbox_output.strip():
+            output_parts.append(sandbox_output.strip())
+            
+        # 添加本地缓冲区输出（如果有）
         if stdout_text.strip():
-            output_parts.append(stdout_text.strip())
-        if result_value is not None:
-            output_parts.append(f"Return: {result_value}")
+            output_parts.append(f"本地输出: {stdout_text.strip()}")
+            
         if stderr_text.strip():
-            output_parts.append(f"Stderr: {stderr_text.strip()}")
+            output_parts.append(f"本地错误: {stderr_text.strip()}")
 
-        final_output = "\n".join(output_parts) if output_parts else "Executed with no output"
+        final_output = "\n".join(output_parts) if output_parts else "代码已执行（无输出）"
+        
         return ToolResult(success=True, output=final_output)
 
     except Exception as e:
+        # 错误处理
         stdout_text = output_buffer.getvalue()
         stderr_text = error_buffer.getvalue()
         error_parts = [
-            f"Exception: {type(e).__name__}: {e}",
+            f"沙箱框架异常: {type(e).__name__}: {e}",
             f"\n--- Traceback ---\n{traceback.format_exc()}",
         ]
         if stdout_text.strip():
@@ -351,19 +386,29 @@ def code_interpreter(bridge: ToolsBridge, code: str) -> ToolResult:
 def calculate(bridge: ToolsBridge, expression: str) -> ToolResult:
     """数学计算工具，用于安全的数学表达式求值"""
     try:
-        import math
-        allowed = {
-            "abs": abs, "round": round, "min": min, "max": max,
-            "sum": sum, "len": len, "pow": pow, "int": int, "float": float,
-            "__builtins__": {}
-        }
-        allowed.update({k: getattr(math, k) for k in dir(math) if not k.startswith("_")})
-        result = eval(expression, allowed)
-        return ToolResult(success=True, output=str(result))
+        # 使用沙箱执行数学表达式
+        sandbox_result = bridge.code_sandbox.execute(
+            code=f"_result_ = {expression}",
+            isolation_level="low"  # 数学计算用低隔离级别
+        )
+        
+        if sandbox_result["success"]:
+            output = sandbox_result.get("output", "")
+            # 提取计算结果
+            import re
+            numbers = re.findall(r'-?\d+\.?\d*', output)
+            if numbers:
+                return ToolResult(success=True, output=numbers[0])
+            return ToolResult(success=True, output=output[:200])
+        else:
+            return ToolResult(
+                success=False, output="",
+                error=f"计算错误: {sandbox_result.get('error', '未知错误')}"
+            )
     except Exception as e:
         return ToolResult(
             success=False, output="",
-            error=f"Calculate error for expression '{expression}': {type(e).__name__}: {e}\n--- Traceback ---\n{traceback.format_exc()}"
+            error=f"Calculate框架错误: {type(e).__name__}: {e}\n--- Traceback ---\n{traceback.format_exc()}"
         )
 
 
