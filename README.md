@@ -2,6 +2,9 @@
 
 A next-generation Agent framework based on global document context and multi-stage reasoning
 
+> 📄 **Paper**: This method is described in detail in our paper, which has been published on arXiv.  
+> **Paper Link**: [https://arxiv.org/abs/2602.02206](https://arxiv.org/abs/2602.02206)
+
 <p align="center">
   <img src="image.png" alt="Fat-Cat Framework" width="800">
 </p>
@@ -18,23 +21,17 @@ Traditional Agent frameworks (such as early LangChain patterns or Assistant API)
 
 **Engineer's Nightmare:** When debugging, facing thousands of lines of JSON dumps makes it difficult to intuitively understand what the Agent is actually "thinking".
 
-### Pain Point Two: The Ephemeral Knowledge Trap
+### Pain Point Two: The Static Toolset
 
-While modern Agent frameworks (like LangGraph, AutoGen, CrewAI) support dynamic tool calling and multi-agent collaboration, they suffer from a critical flaw: **Knowledge Amnesia**. Each task execution is an isolated event—lessons learned, successful strategies, and domain insights evaporate once the session ends.
+Most Agents have "hard-coded" capabilities. When facing unknown problems, Agents can only operate within preset if-else statements or fixed DAG graphs. They lack the ability for **Runtime Learning** and cannot acquire new skills by consulting resources like humans do.
 
-**The Problem:** When an Agent successfully solves a complex task (e.g., debugging a specific library error), this hard-won experience is never preserved. The next time a similar problem arises, the Agent starts from scratch, wasting tokens, time, and potentially making the same mistakes.
+### Pain Point Three: The Absence of Metacognition
 
-**What's Missing:** A persistent **Strategy Library** that accumulates problem-solving methodologies over time. Unlike humans who build expertise through experience, current Agents remain perpetual beginners—capable but never growing wiser.
+This is the most fatal weakness of current Agents—"only execution, no reflection".
 
-### Pain Point Three: The Black-Box Execution Crisis
+**Phenomenon:** Traditional Agents receiving tasks act like reckless interns, directly starting to call tools. Once they hit a dead end (such as code errors or failed searches), they often fall into infinite retry loops or generate hallucinations, forcibly providing wrong answers.
 
-Modern Agents can call tools and execute multi-step plans, but their decision-making process remains opaque. When things go wrong, engineers face an impossible debugging challenge.
-
-**The Problem:** Current frameworks lack **Runtime Observability**. There's no structured way to understand: Why did the Agent choose this strategy? What information led to that decision? Where exactly did the reasoning break down?
-
-**The Consequence:** When an Agent fails or produces incorrect results, you're left with cryptic logs and fragmented state. The absence of a unified, human-readable execution trace makes it nearly impossible to diagnose issues, improve prompts, or trust the Agent with critical tasks.
-
-**What's Missing:** A **Document-Centric Audit Trail** where every stage of reasoning, strategy selection, and execution is recorded in a readable format—making Agent behavior transparent, debuggable, and auditable.
+**Missing Link:** Lack of a high-level "monitor" process to evaluate: "Am I doing this correctly?", "Can my current strategy solve this problem?", "Do I need to stop and replan?".
 
 Fat-Cat aims to solve the above problems. It is not just a Bot that executes tasks, but an operating system prototype with "self-awareness" and "evolutionary capabilities".
 
@@ -65,7 +62,7 @@ Fat-Cat's core breakthrough lies in constructing a hierarchical metacognitive cl
 
 "Think about how to do it before starting"
 
-Traditional Agents receiving "help me write a crawler" might directly start writing code. But in Fat-Cat, Stage 1 Agent (Metacognitive_Analysis_agent.py) will force metacognitive analysis through reasoner.md:
+Traditional Agents receiving "help me write a crawler" might directly start writing code. But in Fat-Cat, Stage 1 Agent (Metacognitive_Analysis_agnet.py) will force metacognitive analysis through reasoner.md:
 
 - **Intent Decomposition:** Does the user really just want code, or do they need deployment?
 - **Constraint Extraction:** What are the implicit language, performance, and dependency library requirements?
@@ -81,7 +78,7 @@ This is Fat-Cat's most innovative module (stage2_capability_upgrade_agent).
 - **Metacognitive Judgment:** If the retrieved strategies have low matching scores (e.g., encountering a completely new framework or error), the Agent will trigger a **"Capability Upgrade"** signal.
 - **Metacognitive Search:**
 
-At this point, the Agent will suspend the current task and launch a subprocess to learn from the internet (via Firecrawl/Tavily). It's not searching for "answers", but rather searching for "methodologies to solve this type of problem".
+At this point, the Agent will suspend the current task and launch a subprocess to learn from the internet (via the built-in no‑API search backends and optional headless browser automation). It's not searching for "answers", but rather searching for "methodologies to solve this type of problem".
 
 **Example:** When encountering a new Python library, the Agent will first read the official documentation, summarize usage, generate a new Markdown strategy file to store in the library, and then return to solve the user's problem.
 
@@ -113,10 +110,7 @@ Fat-Cat/
 ├── ability_library/        # Core capability definitions (Markdown descriptions)
 ├── strategy_library/       # [Long-term Memory] Strategy library, storing learned problem-solving approaches
 ├── form_templates/         # Structured output templates
-├── MCP/                    # [I/O Layer] Model Context Protocol tool implementations
-│   ├── code_interpreter.py # Sandboxed code interpreter
-│   ├── firecrawl.py        # Intelligent crawler (for metacognitive search)
-│   └── tavily.py           # Search engine
+├── stage4_agent/           # [I/O Layer] Tool bridge (web_search/web_scrape/sandbox_*)
 ├── Memory_system/          # [Memory Management] Handles Markdown document read/write flow
 ├── Document_Checking/      # [Memory Integrity] Prevents context loss
 ├── stage1_agent/           # [Prefrontal Cortex] Metacognitive analysis: generates reasoner.md
@@ -218,9 +212,9 @@ python workflow/full_pipeline_runner.py
 
 Fat-Cat is a living system. You can make it stronger through the following methods:
 
-### Adding New Tools (MCP)
+### Adding New Tools
 
-Inherit from _mcp_function.py in the MCP/ directory. Fat-Cat will automatically recognize and register it to Stage 4's toolbox.
+Register new tools in `stage4_agent/tools_bridge.py` using the `@tool` decorator. Stage 4 will discover and execute them via the ToolsBridge registry.
 
 ### Manual Knowledge Injection (Strategy Injection)
 
