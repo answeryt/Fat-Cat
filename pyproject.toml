@@ -44,6 +44,7 @@ dependencies = [
     "PyPDF2>=3.0.0",
     "pdfplumber>=0.11.0",
     "spacy>=3.7.2",
+    "aiofiles>=23.0.0",
 ]
 
 [project.optional-dependencies]
