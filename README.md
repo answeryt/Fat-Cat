@@ -2,9 +2,6 @@
 
 A next-generation Agent framework based on global document context and multi-stage reasoning
 
-> 📄 **Paper**: This method is described in detail in our paper, which has been published on arXiv.  
-> **Paper Link**: [https://arxiv.org/abs/2602.02206](https://arxiv.org/abs/2602.02206)
-
 <p align="center">
   <img src="image.png" alt="Fat-Cat Framework" width="800">
 </p>
@@ -227,3 +224,4 @@ In stage2_agent, you can adjust the confidence threshold for strategy matching. 
 ## 8. License
 
 [License Information]
+
