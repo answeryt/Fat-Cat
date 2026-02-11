@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 from dataclasses import dataclass
 
+import aiofiles
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -113,27 +115,61 @@ class MemoryBridge:
         path = Path(finish_form_path)
         if not path.exists():
             return bridge
-        
+
         content = path.read_text(encoding="utf-8")
         bridge.add_section("Collaboration Form", content, source="finish_form")
         return bridge
-    
+
+    @staticmethod
+    async def from_finish_form_async(finish_form_path: str | Path) -> MemoryBridge:
+        """Async version of from_finish_form that uses non-blocking file I/O."""
+        bridge = MemoryBridge()
+        path = Path(finish_form_path)
+        if not path.exists():
+            return bridge
+
+        async with aiofiles.open(path, encoding="utf-8") as f:
+            content = await f.read()
+        bridge.add_section("Collaboration Form", content, source="finish_form")
+        return bridge
+
     @staticmethod
     def load_stage_output(finish_form_path: str | Path, marker: str) -> str:
         path = Path(finish_form_path)
         if not path.exists():
             return ""
-        
+
         content = path.read_text(encoding="utf-8")
         start_marker = f"<!-- {marker}_START -->"
         end_marker = f"<!-- {marker}_END -->"
-        
+
         start_idx = content.find(start_marker)
         end_idx = content.find(end_marker)
-        
+
         if start_idx == -1 or end_idx == -1:
             return ""
-        
+
+        section = content[start_idx + len(start_marker):end_idx].strip()
+        return section
+
+    @staticmethod
+    async def load_stage_output_async(finish_form_path: str | Path, marker: str) -> str:
+        """Async version of load_stage_output that uses non-blocking file I/O."""
+        path = Path(finish_form_path)
+        if not path.exists():
+            return ""
+
+        async with aiofiles.open(path, encoding="utf-8") as f:
+            content = await f.read()
+        start_marker = f"<!-- {marker}_START -->"
+        end_marker = f"<!-- {marker}_END -->"
+
+        start_idx = content.find(start_marker)
+        end_idx = content.find(end_marker)
+
+        if start_idx == -1 or end_idx == -1:
+            return ""
+
         section = content[start_idx + len(start_marker):end_idx].strip()
         return section
 
@@ -147,6 +183,27 @@ def _load_anchor_sections(finish_form_path: str | Path) -> dict[str, str]:
         return {}
 
     content = path.read_text(encoding="utf-8")
+    sections: dict[str, str] = {}
+
+    for match in ANCHOR_PATTERN.finditer(content):
+        marker = match.group(1).strip()
+        end_marker = f"<!-- {marker}_END -->"
+        end_idx = content.find(end_marker, match.end())
+        if end_idx == -1:
+            continue
+        sections[marker] = content[match.end():end_idx].strip()
+
+    return sections
+
+
+async def _load_anchor_sections_async(finish_form_path: str | Path) -> dict[str, str]:
+    """Async version of _load_anchor_sections that uses non-blocking file I/O."""
+    path = Path(finish_form_path)
+    if not path.exists():
+        return {}
+
+    async with aiofiles.open(path, encoding="utf-8") as f:
+        content = await f.read()
     sections: dict[str, str] = {}
 
     for match in ANCHOR_PATTERN.finditer(content):
@@ -325,13 +382,158 @@ def create_watcher_audit_context(
     finish_form_path: str | Path,
     objective: str,
 ) -> str:
-    """为 Watcher Agent 构建专门的审计上下文，包含进行有效审计所需的关键信息"""
+    """Build specialized audit context for Watcher Agent."""
     bridge = MemoryBridge()
     bridge.add_objective(objective)
 
     anchor_sections = _load_anchor_sections(finish_form_path)
 
-    # Watcher 审计专用的 sections：只包含它需要的信息
+    watcher_descriptors = [
+        ("STAGE1_FAILURE_MODES", "Common Failure Modes", "stage1_agent"),
+        ("STAGE2B_STRATEGY_SNAPSHOT", "Final Strategy Snapshot", "stage2b_agent"),
+        ("STAGE3_EXECUTION_PLAN", "Execution Plan Overview", "stage3_agent"),
+    ]
+
+    _add_sections_from_markers(bridge, anchor_sections, watcher_descriptors)
+
+    return bridge.build_context()
+
+
+# =============================================================================
+# Async versions of context creation functions
+# These functions use aiofiles for non-blocking file I/O operations
+# =============================================================================
+
+
+async def create_stage1_context_async(
+    finish_form_path: str | Path,
+    objective: str,
+    user_context: str | None = None,
+) -> str:
+    """Async version of create_stage1_context using non-blocking file I/O."""
+    bridge = MemoryBridge()
+    bridge.add_objective(objective)
+    if user_context:
+        bridge.add_user_context(user_context)
+
+    anchor_sections = await _load_anchor_sections_async(finish_form_path)
+    descriptors = EXTERNAL_SECTION_DESCRIPTORS + STAGE1_SECTION_DESCRIPTORS
+    _add_sections_from_markers(bridge, anchor_sections, descriptors)
+
+    return bridge.build_context()
+
+
+async def create_stage2a_context_async(
+    finish_form_path: str | Path,
+    objective: str,
+    context_snapshot: str | None = None,
+) -> str:
+    """Async version of create_stage2a_context using non-blocking file I/O."""
+    bridge = MemoryBridge()
+    bridge.add_objective(objective)
+    if context_snapshot:
+        bridge.add_context_snapshot(context_snapshot)
+
+    anchor_sections = await _load_anchor_sections_async(finish_form_path)
+    descriptors = (
+        EXTERNAL_SECTION_DESCRIPTORS
+        + STAGE1_SECTION_DESCRIPTORS
+        + STAGE2A_SECTION_DESCRIPTORS
+    )
+    _add_sections_from_markers(bridge, anchor_sections, descriptors)
+
+    return bridge.build_context()
+
+
+async def create_stage2b_context_async(
+    finish_form_path: str | Path,
+    objective: str,
+    context_snapshot: str | None = None,
+) -> str:
+    """Async version of create_stage2b_context using non-blocking file I/O."""
+    bridge = MemoryBridge()
+    bridge.add_objective(objective)
+    if context_snapshot:
+        bridge.add_context_snapshot(context_snapshot)
+
+    anchor_sections = await _load_anchor_sections_async(finish_form_path)
+    descriptors = (
+        EXTERNAL_SECTION_DESCRIPTORS
+        + STAGE1_SECTION_DESCRIPTORS
+        + STAGE2A_SECTION_DESCRIPTORS
+        + STAGE2B_SECTION_DESCRIPTORS
+    )
+    _add_sections_from_markers(bridge, anchor_sections, descriptors)
+
+    return bridge.build_context()
+
+
+async def create_stage3_context_async(
+    finish_form_path: str | Path,
+    objective: str,
+    context_snapshot: str | None = None,
+    attachments: Mapping[str, Any] | Sequence[Any] | str | None = None,
+) -> str:
+    """Async version of create_stage3_context using non-blocking file I/O."""
+    bridge = MemoryBridge()
+    bridge.add_objective(objective)
+    if context_snapshot:
+        bridge.add_context_snapshot(context_snapshot)
+    if attachments:
+        bridge.add_attachments(attachments)
+
+    anchor_sections = await _load_anchor_sections_async(finish_form_path)
+    descriptors = (
+        EXTERNAL_SECTION_DESCRIPTORS
+        + STAGE1_SECTION_DESCRIPTORS
+        + STAGE2A_SECTION_DESCRIPTORS
+        + STAGE2B_SECTION_DESCRIPTORS
+        + STAGE3_SECTION_DESCRIPTORS
+    )
+    _add_sections_from_markers(bridge, anchor_sections, descriptors)
+
+    return bridge.build_context()
+
+
+async def create_stage4_context_async(
+    finish_form_path: str | Path,
+    objective: str,
+    attachments: Mapping[str, Any] | Sequence[Any] | str | None = None,
+    context_snapshot: str | None = None,
+) -> str:
+    """Async version of create_stage4_context using non-blocking file I/O."""
+    bridge = MemoryBridge()
+    bridge.add_objective(objective)
+    if attachments:
+        bridge.add_attachments(attachments)
+    if context_snapshot:
+        bridge.add_context_snapshot(context_snapshot)
+
+    anchor_sections = await _load_anchor_sections_async(finish_form_path)
+    descriptors = (
+        EXTERNAL_SECTION_DESCRIPTORS
+        + STAGE1_SECTION_DESCRIPTORS
+        + STAGE2A_SECTION_DESCRIPTORS
+        + STAGE2B_SECTION_DESCRIPTORS
+        + STAGE3_SECTION_DESCRIPTORS
+        + STAGE4_SECTION_DESCRIPTORS
+        + WATCHER_SECTION_DESCRIPTORS
+    )
+    _add_sections_from_markers(bridge, anchor_sections, descriptors)
+
+    return bridge.build_context()
+
+
+async def create_watcher_audit_context_async(
+    finish_form_path: str | Path,
+    objective: str,
+) -> str:
+    """Async version of create_watcher_audit_context using non-blocking file I/O."""
+    bridge = MemoryBridge()
+    bridge.add_objective(objective)
+
+    anchor_sections = await _load_anchor_sections_async(finish_form_path)
+
     watcher_descriptors = [
         ("STAGE1_FAILURE_MODES", "Common Failure Modes", "stage1_agent"),
         ("STAGE2B_STRATEGY_SNAPSHOT", "Final Strategy Snapshot", "stage2b_agent"),
@@ -346,11 +548,19 @@ def create_watcher_audit_context(
 __all__ = [
     "MemoryBridge",
     "ContextSection",
+    # Sync versions
     "create_stage1_context",
     "create_stage2a_context",
     "create_stage2b_context",
     "create_stage3_context",
     "create_stage4_context",
     "create_watcher_audit_context",
+    # Async versions
+    "create_stage1_context_async",
+    "create_stage2a_context_async",
+    "create_stage2b_context_async",
+    "create_stage3_context_async",
+    "create_stage4_context_async",
+    "create_watcher_audit_context_async",
 ]
 
