@@ -348,6 +348,107 @@ def code_interpreter(bridge: ToolsBridge, code: str) -> ToolResult:
 
 
 @tool
+def github_search(
+    bridge: ToolsBridge,
+    query: str,
+    max_results: int = 10,
+    sort: str = "stars",
+    order: str = "desc",
+) -> ToolResult:
+    """GitHub 仓库搜索工具，通过 GitHub Search API 搜索公开仓库。
+
+    - query: 搜索关键词（支持 GitHub 搜索语法，如 "agent workflow topic:agent"）
+    - max_results: 返回结果数量上限（最大 30）
+    - sort: 排序字段（stars | forks | updated | best-match），默认 stars
+    - order: 排序方向（desc | asc），默认 desc
+
+    需要 GITHUB_TOKEN 或 GH_TOKEN 环境变量（可选，未设置时使用匿名访问，每小时限 10 次请求）。
+    """
+    import urllib.request
+    import urllib.parse
+    import json as _json
+
+    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    per_page = min(max(1, max_results), 30)
+    valid_sorts = {"stars", "forks", "updated", "best-match"}
+    sort_param = sort if sort in valid_sorts else "stars"
+
+    params = urllib.parse.urlencode({
+        "q": query,
+        "sort": sort_param,
+        "order": order,
+        "per_page": per_page,
+    })
+    url = f"https://api.github.com/search/repositories?{params}"
+
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "Fat-Cat-Agent",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = _json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        body = ""
+        try:
+            body = e.read().decode("utf-8")
+        except Exception:
+            pass
+        return ToolResult(
+            success=False,
+            output="",
+            error=f"GitHub API HTTP {e.code}: {e.reason}. {body}",
+        )
+    except Exception as e:
+        return ToolResult(
+            success=False,
+            output="",
+            error=f"GitHub search error: {type(e).__name__}: {e}\n--- Traceback ---\n{traceback.format_exc()}",
+        )
+
+    items = data.get("items", [])
+    total = data.get("total_count", 0)
+    if not items:
+        return ToolResult(
+            success=True,
+            output=f"[Zero Results] GitHub 搜索返回 0 个仓库，查询词: '{query}'\n"
+                   f"建议：尝试更宽泛的关键词或不同的搜索语法。",
+        )
+
+    lines = [f"GitHub 搜索结果（共 {total} 个仓库，显示前 {len(items)} 个）\n查询: {query}\n"]
+    for idx, item in enumerate(items, 1):
+        name = item.get("full_name", "")
+        html_url = item.get("html_url", "")
+        description = (item.get("description") or "").strip()
+        stars = item.get("stargazers_count", 0)
+        forks = item.get("forks_count", 0)
+        updated = (item.get("updated_at") or "").split("T")[0]  # extract YYYY-MM-DD from ISO 8601
+        language = item.get("language") or ""
+        topics = ", ".join(item.get("topics") or [])
+
+        lines.append(f"{idx}. {name}")
+        lines.append(f"   URL: {html_url}")
+        if description:
+            lines.append(f"   简介: {description}")
+        meta_parts = [f"⭐ {stars}", f"🍴 {forks}"]
+        if language:
+            meta_parts.append(f"语言: {language}")
+        if updated:
+            meta_parts.append(f"更新: {updated}")
+        lines.append(f"   {' | '.join(meta_parts)}")
+        if topics:
+            lines.append(f"   标签: {topics}")
+        lines.append("")
+
+    return ToolResult(success=True, output="\n".join(lines))
+
+
+@tool
 def calculate(bridge: ToolsBridge, expression: str) -> ToolResult:
     """数学计算工具，用于安全的数学表达式求值"""
     try:
@@ -382,4 +483,5 @@ __all__ = [
     "web_scrape",
     "code_interpreter",
     "calculate",
+    "github_search",
 ]

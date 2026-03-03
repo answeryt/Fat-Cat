@@ -18,6 +18,13 @@
   - 适用：深度阅读搜索结果、提取文章全文、获取详细数据
   - 输出：网页标题 + Markdown格式正文内容
 
+- **GitHub 仓库搜索**（tool_id: github_search）
+  - 功能：调用 GitHub Search API 搜索公开仓库，支持关键词、话题、语言等过滤
+  - 参数：query（搜索词，支持 GitHub 搜索语法）、max_results（结果数量，默认10，最大30）、sort（排序字段：stars/forks/updated/best-match，默认stars）、order（排序方向：desc/asc，默认desc）
+  - 适用：查找开源项目、技术调研、查询特定框架或模式的最新实现（如 agent 编排工作流）
+  - 输出：仓库名、URL、简介、Stars、Forks、语言、标签、最近更新时间
+  - 注意：设置 `GITHUB_TOKEN` 或 `GH_TOKEN` 环境变量可提升 API 频率上限（5000次/小时 vs 匿名10次/小时）
+
 - **数学计算**（tool_id: calculate）
   - 功能：安全的数学表达式求值，支持math库函数
   - 参数：expression（数学表达式）
